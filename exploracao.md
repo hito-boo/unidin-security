@@ -92,8 +92,28 @@ python.flask.security.audit.debug-enabled.debug-enabled
    204┆ app.run(host="127.0.0.1", port=5000, debug=True)
 ```
 
+## Inspeção Manual de Código
+
+Após o direcionamento dado pelas ferramentas de análise automática, uma inspeção manual do código foi realizada, a fim de validar potenciais vulnerabilidades encontradas anteriormente e verificar possíveis fraquezas que não foram detectadas automaticamente, considerando as modalidades solicitadas na especificação do trabalho. Dessa forma, as seguintes vulnerabilidades foram observadas:
+
+1. Função de Login (linha 53): Construção da Query a partir da concatenação direta do texto oriundo do cliente, sem nenhum tipo de tratamento.
+
+2. Busca de disciplinas e notas (linha 90): Construção da Query a partir da concatenação direta do parâmetro oriundo do cliente, sem nenhum tipo de tratamento.
+
+3. Verificações para a postagem (linhas 148 e 149): O arquivo e a mensagem postados não passam por nenhum tipo de processo de validação.
+
+4. Filtro de Login: A aplicação não implementa filtros automáticos contra tentativas excessivas de Login.
+
+Outras vulnerabilidades encontradas foram:
+
+1. Chave secreta da aplicação embutido no código (linha 11): A chave secreta da aplicação está exposta diretamente no código.
+
+2. Método GET inadequado (linhas 116 e 162): Utilização do método GET em funções que executam atualização e exclusão.
+
+3. Depurador ativado (linha 204): Caso alguma exceção ocorra, a ativação do depurador pode expôr diversas características da aplicação.
+
 ## Lista de CWEs
-Após a verificação realizada pelas ferramentas anteriores e por meio da inspeção manual de código, a seguinte lista de CWEs foi verificada, de acordo com as modalidades de vulnerabilidades esperadas pela especificação do trabalho.
+Após a verificação realizada pelas ferramentas anteriores e por meio da inspeção manual de código, a seguinte lista de CWEs foi verificada, considerando também as modalidades de vulnerabilidades esperadas pela especificação do trabalho.
 
 * [CWE-89: Improper Neutralization of Special Elements used in an SQL Command](https://cwe.mitre.org/data/definitions/89.html)
 
@@ -103,8 +123,10 @@ Após a verificação realizada pelas ferramentas anteriores e por meio da inspe
 
 * [CWE-521: Weak Password Requirements](https://cwe.mitre.org/data/definitions/521.html)
 
-* [CWE-798: Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html)
+* [CWE-434: Unrestricted Upload of File with Dangerous Type](https://cwe.mitre.org/data/definitions/434.html)
 
-* [CWE-259: Use of Hard-coded Password](https://cwe.mitre.org/data/definitions/259.html)
+* [CWE-798: Use of Hard-coded Credentials - Verificar domínio](https://cwe.mitre.org/data/definitions/798.html)
 
-* [CWE-94: Improper Control of Generation of Code](https://cwe.mitre.org/data/definitions/94.html)
+* [CWE-259: Use of Hard-coded Password - Verificar domínio](https://cwe.mitre.org/data/definitions/259.html)
+
+* [CWE-94: Improper Control of Generation of Code - Verificar domínio](https://cwe.mitre.org/data/definitions/94.html)
