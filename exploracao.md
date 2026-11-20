@@ -1,14 +1,14 @@
 # Exploração
-Este caderno contém a metodologia e os processos realizados para a análise exploratória de vulnerabilidades do código.
+Este caderno contém a metodologia e os processos realizados para a análise exploratória de vulnerabilidades do código. A primeira etapa baseou-se em uma inspeção do código-fonte realizada manualmente e automaticamente por ferramentas especializadas, tal que pontenciais vulnerabilidades fossem identificadas. Posteriormente, tais vulnerabilidades foram colocadas à prova utilizando a ferramenta Zed Attack Proxy (ZAP), de forma a validá-las.
 
 ## Ferramenta Bandit
-Utilizou-se a ferramenta Bandit para realizar análise estática no código, salvando a saída gerada a partir do comando:
+Utilizou-se a ferramenta Bandit para realizar uma análise estática no código, salvando a saída gerada a partir do comando:
 
 ```bash
-bandit -r app.py > saida_bandit.txt
+bandit -r app.py
 ```
 
-Dessa forma, arquivo de texto com possíveis vulnerabilidades foi registrado, contendo as seguintes saídas:
+Dessa forma, as potenciais vulnerabilidades reveladas foram registradas a seguir:
 
 ```text
 >> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'unidin-local-secret-key'
@@ -49,8 +49,51 @@ Dessa forma, arquivo de texto com possíveis vulnerabilidades foi registrado, co
 204	    app.run(host="127.0.0.1", port=5000, debug=True)
 ```
 
+## Ferramenta Semgrep
+A ferramenta Semgrep também foi utilizada para realizar uma análise estática no código, a partir do seguinte comando:
+
+```bash
+semgrep scan --config p/python --config p/flask --config p/owasp-top-ten app.py
+```
+
+Dessa forma, as potenciais vulnerabilidades reveladas foram registradas a seguir:
+
+```text
+python.flask.security.injection.tainted-sql-string.tainted-sql-string
+   ❰❰ Blocking ❱❱
+   Detected user input used to manually construct a SQL string. This is usually bad     
+   practice because manual construction could accidentally result in a SQL injection. An
+   attacker could use a SQL injection to steal or modify contents of the database.      
+   Instead, use a parameterized query which is available by default in most database    
+   engines. Alternatively, consider using an object-relational mapper (ORM) such as     
+   SQLAlchemy which will protect your queries.                                          
+   Details: https://sg.run/JxZj                                                         
+                                                                                       
+   53┆ query = "SELECT * FROM users WHERE email = '" + email + "' AND password = '"
+      + password + "'"                                                            
+   ⋮┆----------------------------------------
+   90┆ query = "SELECT d.id, d.name, g1.value AS nota1, g2.value AS nota2, g3.value 
+      AS nota3, g4.value AS nota4 FROM disciplines d JOIN enrollments e ON         
+      e.discipline_id=d.id LEFT JOIN grades g1 ON g1.discipline_id=d.id AND        
+      g1.student_id=e.student_id AND g1.assessment=1 LEFT JOIN grades g2 ON        
+      g2.discipline_id=d.id AND g2.student_id=e.student_id AND g2.assessment=2 LEFT
+      JOIN grades g3 ON g3.discipline_id=d.id AND g3.student_id=e.student_id AND   
+      g3.assessment=3 LEFT JOIN grades g4 ON g4.discipline_id=d.id AND             
+      g4.student_id=e.student_id AND g4.assessment=4 WHERE e.student_id=" +        
+      str(user["id"]) + " AND d.name LIKE '%" + search + "%' ORDER BY d.name"
+
+python.flask.security.audit.debug-enabled.debug-enabled
+   ❰❰ Blocking ❱❱
+   Detected Flask app with debug=True. Do not deploy to production with this flag enabled
+   as it will leak sensitive information. Instead, consider using Flask configuration    
+   variables or setting 'debug' using system environment variables.                      
+   Details: https://sg.run/dKrd                                                          
+                                                                                       
+   204┆ app.run(host="127.0.0.1", port=5000, debug=True)
+```
+
 ## Lista de CWEs
-A seguinte lista de CWEs foi verificada, de acordo com as modalidades de vulnerabilidades esperadas pela especificação, considerando também fraquezas potencialmente presentes a partir da análise realizada pela ferramenta Bandit.
+Após a verificação realizada pelas ferramentas anteriores e por meio da inspeção manual de código, a seguinte lista de CWEs foi verificada, de acordo com as modalidades de vulnerabilidades esperadas pela especificação do trabalho.
 
 * [CWE-89: Improper Neutralization of Special Elements used in an SQL Command](https://cwe.mitre.org/data/definitions/89.html)
 
@@ -65,4 +108,3 @@ A seguinte lista de CWEs foi verificada, de acordo com as modalidades de vulnera
 * [CWE-259: Use of Hard-coded Password](https://cwe.mitre.org/data/definitions/259.html)
 
 * [CWE-94: Improper Control of Generation of Code](https://cwe.mitre.org/data/definitions/94.html)
-

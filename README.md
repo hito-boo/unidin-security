@@ -11,6 +11,8 @@ Instale as dependências:
 pip install -r requirements.txt
 ```
 
+Obs.: A CLI da ferramenta Semgrep pode ser acessada em sistemas Linux após a instalação.
+
 Execute:
 
 ```bash
