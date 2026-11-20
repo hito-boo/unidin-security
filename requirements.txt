@@ -1,0 +1,4 @@
+Flask==3.1.2
+
+# Ferramentas para verificação do código
+bandit==1.9.4
