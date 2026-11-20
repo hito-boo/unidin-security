@@ -117,7 +117,7 @@ Após a verificação realizada pelas ferramentas anteriores e por meio da inspe
 
 * [CWE-89: Improper Neutralization of Special Elements used in an SQL Command](https://cwe.mitre.org/data/definitions/89.html)
 
-* [CWE-79:Improper Neutralization of Input During Web Page Generation](https://cwe.mitre.org/data/definitions/79.html)
+* [CWE-79: Improper Neutralization of Input During Web Page Generation](https://cwe.mitre.org/data/definitions/79.html)
 
 * [CWE-307: Improper Restriction of Excessive Authentication Attempts](https://cwe.mitre.org/data/definitions/307.html)
 
@@ -130,3 +130,13 @@ Após a verificação realizada pelas ferramentas anteriores e por meio da inspe
 * [CWE-259: Use of Hard-coded Password - Verificar domínio](https://cwe.mitre.org/data/definitions/259.html)
 
 * [CWE-94: Improper Control of Generation of Code - Verificar domínio](https://cwe.mitre.org/data/definitions/94.html)
+
+## Análise Dinâmica
+
+Após a inspeção estática de código, a aplicação foi iniciada para que pudesse ser testada dinamicamente e para que as vulnerabilidades identificadas fossem avaliadas. A seguir, há o registro de cada teste realizado.
+
+1. SQL Injection: Realizar Login com a entrada para o e-mail "'" resulta em erros de exceção, devido à má formação da Query. A depuração ativa resulta na exposição da pilha de procedimentos. Já a entrada "email' OR '1'='1' OR '" resulta no Login como professor, garantindo privilégios inadequados a qualquer um. Tais ataques independem da senha estar correta ou não.
+
+2. SQL Injection: Ao estar autenticado como aluno, é possível pesquisar disciplinas com a entrada "a%' OR '1'='1' OR '%a", o que resulta na exposição das matrículas de todos os alunos, ainda que não esteja exposto o aluno em específico.
+
+3. 
