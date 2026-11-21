@@ -1,5 +1,5 @@
 # Exploração
-Este caderno contém a metodologia e os processos realizados para a análise exploratória de vulnerabilidades do código. A primeira etapa baseou-se em uma inspeção do código-fonte realizada manualmente e automaticamente por ferramentas especializadas, tal que pontenciais vulnerabilidades fossem identificadas. Posteriormente, tais vulnerabilidades foram colocadas à prova utilizando a ferramenta Zed Attack Proxy (ZAP), de forma a validá-las.
+Este caderno contém a metodologia e os processos realizados para a análise exploratória de vulnerabilidades do código. A primeira etapa baseou-se em uma inspeção do código-fonte realizada manualmente e automaticamente por ferramentas especializadas, tal que pontenciais vulnerabilidades fossem identificadas. Posteriormente, tais vulnerabilidades foram colocadas à prova utilizando testes dinâmicos, de forma a validá-las.
 
 ## Ferramenta Bandit
 Utilizou-se a ferramenta Bandit para realizar uma análise estática no código, salvando a saída gerada a partir do comando:
