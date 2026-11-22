@@ -6,9 +6,23 @@ import sqlite3
 import hashlib
 import uuid
 from database import get_connection, init_db, encripta_password
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "unidin-local-secret-key"
+
+app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
+BLOCKED_EXTENSIONS = {
+    "exe", "bat", "cmd", "msi", "com", "scr", "vbs", "ps1", "sh", "dll", "jar",
+    "html", "htm", "svg", "js"
+}
+
+def is_blocked_file(filename):
+    if "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in BLOCKED_EXTENSIONS
+
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -50,8 +64,7 @@ def login():
     if email or password:
         password = encripta_password(password)
         conn = get_connection()
-        query = "SELECT * FROM users WHERE email = '" + email + "' AND password = '" + password + "'"
-        user = conn.execute(query).fetchone()
+        user = conn.execute("SELECT * FROM users WHERE email = ? AND password = ?", (email, password)).fetchone()
         conn.close()
         if user:
             session.clear()
@@ -87,8 +100,7 @@ def aluno():
     conn = get_connection()
     search = request.args.get("q", "")
     if search:
-        query = "SELECT d.id, d.name, g1.value AS nota1, g2.value AS nota2, g3.value AS nota3, g4.value AS nota4 FROM disciplines d JOIN enrollments e ON e.discipline_id=d.id LEFT JOIN grades g1 ON g1.discipline_id=d.id AND g1.student_id=e.student_id AND g1.assessment=1 LEFT JOIN grades g2 ON g2.discipline_id=d.id AND g2.student_id=e.student_id AND g2.assessment=2 LEFT JOIN grades g3 ON g3.discipline_id=d.id AND g3.student_id=e.student_id AND g3.assessment=3 LEFT JOIN grades g4 ON g4.discipline_id=d.id AND g4.student_id=e.student_id AND g4.assessment=4 WHERE e.student_id=" + str(user["id"]) + " AND d.name LIKE '%" + search + "%' ORDER BY d.name"
-        rows = conn.execute(query).fetchall()
+        rows = conn.execute("SELECT d.id, d.name, g1.value AS nota1, g2.value AS nota2, g3.value AS nota3, g4.value AS nota4 FROM disciplines d JOIN enrollments e ON e.discipline_id=d.id LEFT JOIN grades g1 ON g1.discipline_id=d.id AND g1.student_id=e.student_id AND g1.assessment=1 LEFT JOIN grades g2 ON g2.discipline_id=d.id AND g2.student_id=e.student_id AND g2.assessment=2 LEFT JOIN grades g3 ON g3.discipline_id=d.id AND g3.student_id=e.student_id AND g3.assessment=3 LEFT JOIN grades g4 ON g4.discipline_id=d.id AND g4.student_id=e.student_id AND g4.assessment=4 WHERE e.student_id= ? AND d.name LIKE ? ORDER BY d.name", (str(user["id"]), f"%{search}%")).fetchall()
     else:
         rows = conn.execute("SELECT d.id, d.name, g1.value AS nota1, g2.value AS nota2, g3.value AS nota3, g4.value AS nota4 FROM disciplines d JOIN enrollments e ON e.discipline_id=d.id LEFT JOIN grades g1 ON g1.discipline_id=d.id AND g1.student_id=e.student_id AND g1.assessment=1 LEFT JOIN grades g2 ON g2.discipline_id=d.id AND g2.student_id=e.student_id AND g2.assessment=2 LEFT JOIN grades g3 ON g3.discipline_id=d.id AND g3.student_id=e.student_id AND g3.assessment=3 LEFT JOIN grades g4 ON g4.discipline_id=d.id AND g4.student_id=e.student_id AND g4.assessment=4 WHERE e.student_id=? ORDER BY d.name", (user["id"],)).fetchall()
     conn.close()
@@ -111,7 +123,7 @@ def disciplina(discipline_id):
         students = []
         grades = conn.execute("SELECT * FROM grades WHERE discipline_id=? AND student_id=? ORDER BY assessment", (discipline_id,user["id"])).fetchall()
     conn.close()
-    return render_template("disciplina.html", user=user, discipline=discipline, messages=messages, students=students, grades=grades)
+    return render_template("disciplina_corrigido.html", user=user, discipline=discipline, messages=messages, students=students, grades=grades)
 
 @app.route("/disciplina/<int:discipline_id>/nota", methods=["GET"])
 def save_grade(discipline_id):
@@ -146,13 +158,14 @@ def add_message(discipline_id):
         abort(403)
     body = request.form.get("body", "")
     file = request.files.get("file")
-    original_filename = file.filename if file and file.filename else None
+    original_filename = None
     stored_filename = None
-    if file and original_filename:
+    if file and file.filename:
+        original_filename = secure_filename(file.filename)
+        if not original_filename or is_blocked_file(original_filename):
+            abort(400)
         stored_filename = uuid.uuid4().hex + "_" + original_filename
         file.save(UPLOAD_DIR / stored_filename)
-    if not body and not stored_filename:
-        abort(400)
     conn = get_connection()
     conn.execute("INSERT INTO messages(discipline_id,user_id,body,original_filename,stored_filename) VALUES(?,?,?,?,?)", (discipline_id,user["id"],body,original_filename,stored_filename))
     conn.commit()
@@ -201,4 +214,4 @@ def download_file(filename):
     return send_from_directory(UPLOAD_DIR, filename, as_attachment=False, mimetype=mimetype)
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=False)
