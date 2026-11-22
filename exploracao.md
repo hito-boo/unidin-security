@@ -155,3 +155,16 @@ Password: <input type="password" name="password" /><br/>
 4. É possível realizar postagens com anexos com conteúdos maliciosos, uma vez que o formato ou o conteúdo não é verificado. Tais arquivos ainda podem ser visualizados posteriormente ou mesmo baixados por demais usuários, ampliando o potencial de exploração da vulnerabilidade. Um arquivo HTML com o mesmo Script anterior poderia ser utilizado. Não foi verificada a execução de certos conteúdos, porém ainda é possível compartilhar arquivos potencialmente maliciosos (CWE-434).
 
 Verificar em seguida: CWE-307, CWE-521, ataques de força bruta, ataques com dicionário (mais direcionados ao Login mesmo).
+
+## Correções realizadas
+
+Os arquivos modificados foram duplicados para preservar a versão original da aplicação. As alterações implementadas em cada arquivo estão registradas a seguir:
+
+1. **`app.py` -> `app_corrigido.py`**
+   * **Desativação do modo de depuração (CWE-489):** alteração de `debug=True` para `debug=False` na inicialização da aplicação, evitando a exposição da pilha de chamadas em caso de erro.
+   * **Parametrização da consulta de Login (CWE-89):** substituição da concatenação de strings na rota `/login` por consulta parametrizada (`?`).
+   * **Parametrização da busca de disciplinas (CWE-89):** substituição da concatenação de strings na consulta da página do aluno por consulta parametrizada, passando o padrão do `LIKE` como parâmetro.
+   * **Controles de envio de anexos no fórum (CWE-434):** definição do limite de 30 MB por requisição (`MAX_CONTENT_LENGTH`), sanitização do nome do arquivo com `secure_filename` e bloqueio de extensões executáveis e interpretáveis pelo navegador (`BLOCKED_EXTENSIONS`) em `add_message`, retornando erro HTTP 400 quando bloqueado.
+
+2. **`templates/disciplina.html` -> `templates/disciplina_corrigido.html`**
+   * **Restauração do escapamento automático no fórum (CWE-79):** remoção do filtro `|safe` na exibição do corpo das mensagens (`{{ message['body'] }}`), reativando o escapamento padrão do Jinja2 contra Stored XSS.
