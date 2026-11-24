@@ -1,0 +1,42 @@
+UniDIN - Log de Verificação das Mitigações
+Data/Hora: 2026-11-24T19:53:39
+Diretório: C:\Users\zlore\uem\unidin-security
+
+=== 1. V01 (CWE-307) - Restrição de tentativas excessivas em /login ===
+Limite configurado (MAX_LOGIN_ATTEMPTS): 5
+  Tentativa falha #1: HTTP 200
+  Tentativa falha #2: HTTP 200
+  Tentativa falha #3: HTTP 200
+  Tentativa falha #4: HTTP 200
+  Tentativa falha #5: HTTP 200
+[PASS] Primeiras 5 falhas retornam HTTP 200 | status=[200, 200, 200, 200, 200]
+  Tentativa #6 (bloqueada): HTTP 429
+[PASS] Tentativa #6 retorna HTTP 429 (bloqueio ativo) | status=429
+[PASS] Mensagem de bloqueio exibida ao usuário
+[PASS] Credencial válida continua bloqueada durante o período de lockout | status=429
+
+=== 2. V02 (CWE-916/CWE-759) - Login legítimo e migração de hash ===
+Hash antes do login: tamanho=128, prefixo=6d855ae2ae3547e208e3ec12...
+[PASS] Hash inicial no banco é SHA-512 legado (128 caracteres hex) | len=128
+[PASS] Login legítimo com conta de teste retorna redirecionamento (HTTP 302) | status=302, location=/
+[PASS] Acesso à área autenticada /aluno funciona após login | status=200
+Hash após login: tamanho=162, prefixo=scrypt:32768:8:1$KhFwo66mDjx...
+[PASS] Hash migrado automaticamente para formato moderno com salt (scrypt/pbkdf2) | prefixo=scrypt:32768:8:1
+[PASS] Segundo login usando o hash já migrado funciona (HTTP 302) | status=302
+
+=== 3. V02 (CWE-521) - Validador de política de senha ===
+[PASS] Política de senha (4 caracteres (padrão antigo fraco)) | esperado=False, obtido=False, msg='A senha deve ter entre 12 e 128 caracteres.'
+[PASS] Política de senha (8 caracteres (teto antigo fraco)) | esperado=False, obtido=False, msg='A senha deve ter entre 12 e 128 caracteres.'
+[PASS] Política de senha (senha comum) | esperado=False, obtido=False, msg='A senha deve ter entre 12 e 128 caracteres.'
+[PASS] Política de senha (sem maiúscula nem símbolo) | esperado=False, obtido=False, msg='A senha deve conter maiúscula, minúscula, número e símbolo.'
+[PASS] Política de senha (18 caracteres com todas as classes) | esperado=True, obtido=True
+
+=== 4. Regressão rápida das correções anteriores (V03–V06) ===
+[PASS] V03 (CWE-89/489): Aspa simples no login não gera HTTP 500 | status=200
+[PASS] V03 (CWE-89): Payload OR '1'='1' no login é recusado (HTTP 200) | status=200
+[PASS] add_message: Mensagem vazia sem anexo retorna HTTP 400 | status=400
+[PASS] V06 (CWE-434): Upload de arquivo .html é bloqueado (HTTP 400) | status=400
+[PASS] V06 (CWE-434): Upload de arquivo .txt legítimo continua funcionando (HTTP 302) | status=302
+
+=== Resumo ===
+Total de verificações: 19 | Aprovadas: 19 | Falhas: 0

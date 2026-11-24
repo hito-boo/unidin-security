@@ -5,7 +5,9 @@ import mimetypes
 import sqlite3
 import hashlib
 import uuid
-from database import get_connection, init_db, encripta_password
+from database_corrigido import get_connection, init_db, encripta_password, verifica_password
+import time
+from collections import defaultdict
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -16,6 +18,33 @@ BLOCKED_EXTENSIONS = {
     "exe", "bat", "cmd", "msi", "com", "scr", "vbs", "ps1", "sh", "dll", "jar",
     "html", "htm", "svg", "js"
 }
+
+MAX_LOGIN_ATTEMPTS = 5
+WINDOW_SECONDS = 300
+LOCKOUT_SECONDS = 300
+
+failed_attempts = defaultdict(list)
+locked_until = {}
+
+def _is_locked(key: str, now: float) -> bool:
+    until = locked_until.get(key, 0)
+    if now < until:
+        return True
+    if key in locked_until:
+        del locked_until[key]
+    return False
+
+def _register_failure(key: str, now: float) -> None:
+    recent = [t for t in failed_attempts[key] if now - t < WINDOW_SECONDS]
+    recent.append(now)
+    failed_attempts[key] = recent
+    if len(recent) >= MAX_LOGIN_ATTEMPTS:
+        locked_until[key] = now + LOCKOUT_SECONDS
+        failed_attempts[key].clear()
+
+def _clear_failures(key: str) -> None:
+    failed_attempts.pop(key, None)
+    locked_until.pop(key, None)
 
 def is_blocked_file(filename):
     if "." not in filename:
@@ -62,14 +91,36 @@ def login():
     email = request.args.get("email", "")
     password = request.args.get("password", "")
     if email or password:
-        password = encripta_password(password)
+        now = time.time()
+        ip_key = f"ip:{request.remote_addr}"
+        user_key = f"user:{email.strip().lower()}"
+
+        if _is_locked(ip_key, now) or (email.strip() and _is_locked(user_key, now)):
+            flash("Muitas tentativas de login. Aguarde alguns minutos e tente novamente.", "error")
+            return render_template("login.html"), 429
+
         conn = get_connection()
-        user = conn.execute("SELECT * FROM users WHERE email = ? AND password = ?", (email, password)).fetchone()
-        conn.close()
+        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
         if user:
-            session.clear()
-            session["user_id"] = user["id"]
-            return redirect(url_for("index"))
+            valido, precisa_migrar = verifica_password(user["password"], password)
+            if valido:
+                if precisa_migrar:
+                    conn.execute(
+                        "UPDATE users SET password = ? WHERE id = ?",
+                        (encripta_password(password), user["id"]),
+                    )
+                    conn.commit()
+                conn.close()
+                _clear_failures(ip_key)
+                _clear_failures(user_key)
+                session.clear()
+                session["user_id"] = user["id"]
+                return redirect(url_for("index"))
+        conn.close()
+
+        _register_failure(ip_key, now)
+        if email.strip():
+            _register_failure(user_key, now)
         flash("Credenciais inválidas.", "error")
     return render_template("login.html")
 
@@ -166,6 +217,8 @@ def add_message(discipline_id):
             abort(400)
         stored_filename = uuid.uuid4().hex + "_" + original_filename
         file.save(UPLOAD_DIR / stored_filename)
+    if not body and not stored_filename:
+        abort(400)
     conn = get_connection()
     conn.execute("INSERT INTO messages(discipline_id,user_id,body,original_filename,stored_filename) VALUES(?,?,?,?,?)", (discipline_id,user["id"],body,original_filename,stored_filename))
     conn.commit()
